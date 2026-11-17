@@ -183,7 +183,9 @@ one, matched on the error body (`effortRequired`, on Chat and Responses,
 forwarded or translated; `TestEffortRequiredRefusalAskedAgainAtLow`), or
 turns none or minimal away in `alwaysThinks`' words, which name no levels
 (`needsReasoning`: Kimi Code's K3.1 Pro on Chat, #3739,
-`TestKimiChatThinkingOffRefused`), then at the model's lowest from the start; any
+`TestKimiChatThinkingOffRefused`), then at the model's lowest from the start —
+minimal too when the model's own list doesn't name it, so the body went out at
+its lowest on level instead (`TestKimiChatMinimalFittedLevelRefused`); any
 other 400 goes back as it came (`TestOtherBadRequestNotAskedAgainAtLow`). A session on Codex's
 own model sends them to ChatGPT as Codex sent them, whatever the config says
 (`TestCodexAppSideTurnsStayWithAnOwnModelSession`); so does a session model

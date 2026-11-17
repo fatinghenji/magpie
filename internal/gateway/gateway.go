@@ -7531,17 +7531,21 @@ func (s *Server) passthrough(w http.ResponseWriter, r *http.Request, p provider.
 			}
 		}
 	}
-	if e := bodyEffort(proto, body); res.StatusCode == http.StatusBadRequest && proto != provider.Anthropic && !offRetried && (e == "" || offEffort(e)) {
+	if e := bodyEffort(proto, body); res.StatusCode == http.StatusBadRequest && proto != provider.Anthropic && !offRetried && (e == "" || offEffort(e) || offEffort(asked)) {
 		// no reasoning effort, or none, turned away by a model that needs
 		// one (a Codex title on a model other than its own asks none,
 		// cybercaius on Discord): asked again once at its lowest, low
-		// where its levels aren't known. Only that refusal: any other 400
-		// goes back as it came
+		// where its levels aren't known. A client's off level the model's
+		// own list doesn't name is fitted to its lowest on level first
+		// (minimal to low), and that level refused the same way is asked
+		// again too: the effort the agent asked decides, not the one the
+		// body went out at (#3739). Only that refusal: any other 400 goes
+		// back as it came
 		b, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 		res.Body.Close()
 		res.Body = io.NopCloser(bytes.NewReader(b))
-		if needsReasoning(e, b) {
-			if offEffort(e) {
+		if needsReasoning(e, b) || offEffort(asked) && alwaysThinks.Match(wordsOf(b)) {
+			if offEffort(e) || offEffort(asked) {
 				s.markUnfit(p.ID, offRefused(model), proto)
 			}
 			if res, err = s.forward(r.Context(), p, proto, path, p.Prepare(withModelEffort(proto, body, model, onEffort(p, model), p.Efforts(model))), r.Header); err != nil {

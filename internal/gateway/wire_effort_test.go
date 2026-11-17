@@ -208,3 +208,39 @@ func TestKimiChatThinkingOffRefused(t *testing.T) {
 		})
 	}
 }
+
+// #3739: a Chat client's minimal is fitted to the model's lowest on level
+// (low) when the model's own list doesn't name minimal, and that level
+// refused in Kimi's always-thinks wording is asked again once, not handed
+// back: the effort the agent asked decides, not the one the body went out at.
+func TestKimiChatMinimalFittedLevelRefused(t *testing.T) {
+	const refusal = `{"error":{"message":"Kimi Code (China): K3.1 Pro does not support disabled thinking mode. Please enable thinking and try again, or choose another model.","type":"invalid_request_error"}}`
+	var sent []string
+	f := &fake{t: t, reply: chatHi}
+	f.refuse = func(b []byte) (int, string) {
+		var v struct {
+			Effort string `json:"reasoning_effort"`
+		}
+		json.Unmarshal(b, &v)
+		sent = append(sent, v.Effort)
+		if len(sent) == 1 {
+			return 400, refusal
+		}
+		return 0, ""
+	}
+	setup(t, provider.Chat, f)
+	// the model's levels name no minimal, so the client's minimal is fitted
+	// to low before it goes out
+	if err := provider.SetModelEfforts("fake/m1", []string{"none", "low", "high"}); err != nil {
+		t.Fatal(err)
+	}
+	s := New()
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, httptest.NewRequest("POST", "/v1/chat/completions", strings.NewReader(`{"model":"m1","stream":true,"messages":[{"role":"user","content":"hi"}],"reasoning_effort":"minimal"}`)))
+	if rec.Code != 200 {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	if strings.Join(sent, ",") != "low,low" {
+		t.Errorf("reasoning_effort sent %v, want low,low (asked again once)", sent)
+	}
+}
